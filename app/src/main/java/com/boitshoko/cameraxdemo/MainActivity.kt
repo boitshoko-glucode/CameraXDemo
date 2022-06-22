@@ -21,8 +21,14 @@ import java.util.concurrent.ExecutorService
 import android.provider.MediaStore
 
 import android.content.ContentValues
+import android.content.Context
 import android.os.Build
 import com.boitshoko.cameraxdemo.databinding.ActivityMainBinding
+import com.google.mlkit.common.model.LocalModel
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.custom.CustomImageLabelerOptions
 
 typealias LumaListener = (luma: Double) -> Unit
 
@@ -37,10 +43,14 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var cameraExecutor: ExecutorService
 
+    private lateinit var labeler: ImageLabeler
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         viewBinding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(viewBinding.root)
+
+
 
         // Request camera permissions
         if (allPermissionsGranted()) {
@@ -55,6 +65,21 @@ class MainActivity : AppCompatActivity() {
         viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
 
         cameraExecutor = Executors.newSingleThreadExecutor()
+
+        val localModel = LocalModel.Builder()
+            .setAssetFilePath("food_V1.tflite")
+            // or .setAbsoluteFilePath(absolute file path to model file)
+            // or .setUri(URI to model file)
+            .build()
+
+        Log.d(TAG, "path: ${localModel.assetFilePath}")
+        Log.d(TAG, "path: ${localModel.absoluteFilePath}")
+
+        val customImageLabelerOptions = CustomImageLabelerOptions.Builder(localModel)
+            .setConfidenceThreshold(0.5f)
+            .setMaxResultCount(5)
+            .build()
+        labeler = ImageLabeling.getClient(customImageLabelerOptions)
     }
 
     private fun takePhoto() {
@@ -121,7 +146,7 @@ class MainActivity : AppCompatActivity() {
             val imageAnalyzer = ImageAnalysis.Builder()
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer { luma ->
+                    it.setAnalyzer(cameraExecutor, LuminosityAnalyzer(this, labeler) { luma ->
                         Log.d(TAG, "Average luminosity: $luma")
                     })
                 }
@@ -185,7 +210,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private class LuminosityAnalyzer(private val listener: LumaListener) : ImageAnalysis.Analyzer {
+    private class LuminosityAnalyzer(private val context: Context,
+                                     private val labeler: ImageLabeler,
+                                     private val listener: LumaListener) : ImageAnalysis.Analyzer {
 
         private fun ByteBuffer.toByteArray(): ByteArray {
             rewind()    // Rewind the buffer to zero
@@ -194,16 +221,45 @@ class MainActivity : AppCompatActivity() {
             return data // Return the byte array
         }
 
-        override fun analyze(image: ImageProxy) {
+        @androidx.camera.core.ExperimentalGetImage
+        override fun analyze(imageProxy: ImageProxy) {
 
-            val buffer = image.planes[0].buffer
+            val buffer = imageProxy.planes[0].buffer
             val data = buffer.toByteArray()
             val pixels = data.map { it.toInt() and 0xFF }
             val luma = pixels.average()
 
             listener(luma)
 
-            image.close()
+            val mediaImage = imageProxy.image
+            if (mediaImage != null) {
+                val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                // Pass image to an ML Kit Vision API
+                labeler.process(image)
+                    .addOnSuccessListener { labels ->
+                        // Task completed successfully
+                        for (label in labels){
+                            Log.d(TAG, "analyze: size ${labels.size}")
+                            Log.d(TAG, "analyze: ${label.text}")
+                            Log.d(TAG, "analyze: confidence ${label.confidence}")
+
+                            Toast.makeText(context, "${label.text} detected", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        // Task failed with an exception
+                        Log.e(TAG, "${e.message}")
+                        mediaImage.close()
+                        imageProxy.close()
+                    }
+                    .addOnCompleteListener {
+                        mediaImage.close()
+                        imageProxy.close()
+                    }
+            }
+
+            mediaImage?.close()
+            imageProxy.close()
         }
     }
 }

@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
 }
 
 android {
@@ -32,6 +33,12 @@ android {
 
     buildFeatures {
         viewBinding true
+        dataBinding true
+    }
+
+    aaptOptions {
+        noCompress "tflite"
+        // or noCompress "lite"
     }
 }
 
@@ -41,6 +48,11 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.2'
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    implementation 'com.google.mlkit:image-labeling-custom:17.0.1'
+   // implementation 'com.google.android.gms:play-services-mlkit-image-labeling-custom:16.0.0-beta3'
+
+  //  implementation 'com.google.mlkit:object-detection-custom:17.0.0'
 
     def camerax_version = "1.2.0-alpha02"
     implementation "androidx.camera:camera-core:${camerax_version}"

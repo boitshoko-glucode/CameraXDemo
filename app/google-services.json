@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "695176602288",
+    "project_id": "cameraxdemo-9a56c",
+    "storage_bucket": "cameraxdemo-9a56c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695176602288:android:0bba9232c53f2a7a62d175",
+        "android_client_info": {
+          "package_name": "com.boitshoko.cameraxdemo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695176602288-7l3ie39a8i3qtmvpl5jv5b2c6o2f7bjo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsdBk75L_JdbKb-QM0pTF7ns5LBbzij1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695176602288-7l3ie39a8i3qtmvpl5jv5b2c6o2f7bjo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
